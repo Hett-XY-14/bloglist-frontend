@@ -28,6 +28,15 @@ const App = () => {
     })
   },[])
 
+  useEffect(() => {
+    const storedUser = JSON.parse(window.localStorage.getItem('loggedBlogCollectorUser'))
+    if (storedUser) {
+      setUser(storedUser)
+      blogService.setToken(storedUser.token)
+      showNotification(`Welcome back ${storedUser.username}`, 3, 2500)
+    }
+  },[])
+
   // --- Login funcionality ---
   const onUsernameChange = (event) => {
     setUsername(event.target.value)
@@ -37,12 +46,23 @@ const App = () => {
   }
   const handleLogin = async (event) => {
     event.preventDefault()
-    const loggedUser = await loginService.login({
-      username, password
-    })
-    console.log(loggedUser)
-    setUser(loggedUser)
+    try {
+
+      const loggedUser = await loginService.login({
+        username, password
+      })
+      console.log(loggedUser)
+      window.localStorage.setItem('loggedBlogCollectorUser', JSON.stringify(loggedUser))
+      blogService.setToken(loggedUser.token)
+      setUser(loggedUser)
+      showNotification(`Welcome back ${loggedUser.username}`, 3, 2500)
+    
+    } catch (exception) {
+      console.log(exception)
+      showNotification(exception.message, 2, 5000)
+    }
   }
+
   // --- Adding new blog functionality ---
   const onTitleChange = (event) => {
     setTitle(event.target.value)
@@ -56,25 +76,63 @@ const App = () => {
   const handleBlogSubmit = (event) => {
     event.preventDefault()
     console.log("Blog submitted")
+    const newCollectedBlog = {
+      title: title,
+      author: author,
+      url: url
+    }
+    blogService
+      .create(newCollectedBlog)
+      .then(collectedBlog => {
+        setBlogs(blogs.concat(collectedBlog))
+        setTitle("")
+        setAuthor("")
+        setUrl("")
+        console.log(collectedBlog)
+        showNotification("Blog Collected!", 2, 3000)
+      })
   }
 
   // --- logout functionality ---
   const handleLogout = (event) => {
     event.preventDefault()
     console.log("Handle Logout called")
+    window.localStorage.removeItem('loggedBlogCollectorUser')
+    setUser(null)
+    setPassword("")
+    setUsername("")
   }
+
+  // --- Auxiliary methods ---
+  const showNotification = (message, type, timeout) => {
+    setNotification({
+      message,
+      type
+    })
+    setTimeout(() => {
+      setNotification('')
+    }, timeout)
+  }
+  
   // --- return ---
   return (
     <div>
       <Header/>
-      <Login username={username} password={password} onUsernameChange={onUsernameChange} onPasswordChange={onPasswordChange} handleLogin={handleLogin}/>
-      <UserRow user={user} userPhoto={userPhoto} handleLogout={handleLogout}/>
-      <Notification notification={notification}/>
-      <h1>add new blog</h1>
-      <BlogForm title={title} author={author} url={url} onTitleChange={onTitleChange} 
-        onAuthorChange={onAuthorChange} onUrlChange={onUrlChange} handleBlogSubmit={handleBlogSubmit}
-      />
-      <BlogList blogs={blogs}/>
+      {!user && 
+        <Login username={username} password={password} onUsernameChange={onUsernameChange} onPasswordChange={onPasswordChange} handleLogin={handleLogin}/>
+      }
+      { user && 
+      <>
+        <UserRow user={user} userPhoto={userPhoto} handleLogout={handleLogout}/>
+        <Notification message={notification.message} type={notification.type}/>
+        <h1>add new blog</h1>
+        <BlogForm title={title} author={author} url={url} onTitleChange={onTitleChange} 
+          onAuthorChange={onAuthorChange} onUrlChange={onUrlChange} handleBlogSubmit={handleBlogSubmit}
+        />
+        <BlogList blogs={blogs}/>
+      </>
+      }
+      
     </div>
   )
 }
