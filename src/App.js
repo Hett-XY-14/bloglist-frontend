@@ -37,32 +37,6 @@ const App = () => {
     }
   },[])
 
-  // --- Login funcionality ---
-  const onUsernameChange = (event) => {
-    setUsername(event.target.value)
-  }
-  const onPasswordChange = (event) => {
-    setPassword(event.target.value)
-  }
-  const handleLogin = async (event) => {
-    event.preventDefault()
-    try {
-
-      const loggedUser = await loginService.login({
-        username, password
-      })
-      console.log(loggedUser)
-      window.localStorage.setItem('loggedBlogCollectorUser', JSON.stringify(loggedUser))
-      blogService.setToken(loggedUser.token)
-      setUser(loggedUser)
-      showNotification(`Welcome back ${loggedUser.username}`, 3, 2500)
-    
-    } catch (exception) {
-      console.log(exception)
-      showNotification(exception.message, 2, 5000)
-    }
-  }
-
   // --- Adding new blog functionality ---
   const onTitleChange = (event) => {
     setTitle(event.target.value)
@@ -93,6 +67,34 @@ const App = () => {
       })
   }
 
+  // --- Login funcionality ---
+  const onUsernameChange = (event) => {
+    setUsername(event.target.value)
+  }
+  const onPasswordChange = (event) => {
+    setPassword(event.target.value)
+  }
+  const handleLogin = async (event) => {
+    event.preventDefault()
+    try {
+
+      const loggedUser = await loginService.login({
+        username, password
+      })
+      console.log(loggedUser)
+      window.localStorage.setItem('loggedBlogCollectorUser', JSON.stringify(loggedUser))
+      blogService.setToken(loggedUser.token)
+      setUser(loggedUser)
+      setUsername('')
+      setPassword('')
+      showNotification(`Welcome back ${loggedUser.username}`, 3, 2500)
+    
+    } catch (exception) {
+      console.log(exception)
+      showNotification("Wrong username or password", 2, 5000)
+    }
+  }
+
   // --- logout functionality ---
   const handleLogout = (event) => {
     event.preventDefault()
@@ -119,18 +121,22 @@ const App = () => {
     <div>
       <Header/>
       {!user && 
-        <Login username={username} password={password} onUsernameChange={onUsernameChange} onPasswordChange={onPasswordChange} handleLogin={handleLogin}/>
+        <>
+          <Login username={username} password={password} onUsernameChange={onUsernameChange} onPasswordChange={onPasswordChange} handleLogin={handleLogin}/>
+          <Notification message={notification.message} type={notification.type}/>
+        </>
       }
       { user && 
-      <>
-        <UserRow user={user} userPhoto={userPhoto} handleLogout={handleLogout}/>
-        <Notification message={notification.message} type={notification.type}/>
-        <h1>add new blog</h1>
-        <BlogForm title={title} author={author} url={url} onTitleChange={onTitleChange} 
-          onAuthorChange={onAuthorChange} onUrlChange={onUrlChange} handleBlogSubmit={handleBlogSubmit}
-        />
-        <BlogList blogs={blogs}/>
-      </>
+        <>
+          <UserRow user={user} userPhoto={userPhoto} handleLogout={handleLogout}/>
+          <Notification message={notification.message} type={notification.type}/>
+          <h1>add new blog</h1>
+          <BlogForm title={title} author={author} url={url} onTitleChange={onTitleChange} 
+            onAuthorChange={onAuthorChange} onUrlChange={onUrlChange} handleBlogSubmit={handleBlogSubmit}
+          />
+          <h1>your blog collection:</h1>
+          <BlogList blogs={blogs}/>
+        </>
       }
       
     </div>
