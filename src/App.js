@@ -1,4 +1,4 @@
-import { useState, useEffect} from "react";
+import { useState, useEffect, useRef} from "react";
 import blogService from './services/blogService';
 import Header from "./components/Header";
 import UserRow from "./components/UserRow";
@@ -8,19 +8,19 @@ import BlogList from "./components/BlogList";
 import Notification from "./components/Notification";
 import Login from "./components/Login";
 import loginService from "./services/loginService";
+import Togglable from "./components/Togglable";
 
 const App = () => {
   const [blogs, setBlogs] = useState([])
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [user, setUser] = useState(null)
-  const [title, setTitle] = useState('')
-  const [author, setAuthor] = useState('')
-  const [url, setUrl] = useState('')
   const [notification, setNotification] = useState({
     message: '',
     type: null
   })
+
+  const blogFormRef = useRef()
 
   useEffect(() => {
     blogService.getAll().then(blogs => {
@@ -37,34 +37,48 @@ const App = () => {
     }
   },[])
 
+  useEffect(() => {
+    blogs.sort((a, b) => {return b.likes - a.likes})
+  },[blogs])
+
   // --- Adding new blog functionality ---
-  const onTitleChange = (event) => {
-    setTitle(event.target.value)
-  }
-  const onAuthorChange = (event) => {
-    setAuthor(event.target.value)
-  }
-  const onUrlChange = (event) => {
-    setUrl(event.target.value)
-  }
-  const handleBlogSubmit = (event) => {
-    event.preventDefault()
-    console.log("Blog submitted")
-    const newCollectedBlog = {
-      title: title,
-      author: author,
-      url: url
-    }
+  const handleBlogSubmit = (newCollectedBlog) => {
+    blogFormRef.current.toggleVisibility()
     blogService
       .create(newCollectedBlog)
       .then(collectedBlog => {
         setBlogs(blogs.concat(collectedBlog))
-        setTitle("")
-        setAuthor("")
-        setUrl("")
         console.log(collectedBlog)
         showNotification("Blog Collected!", 2, 3000)
       })
+  }
+
+  // --- Delete functionality ---
+  const handleBlogDeletion = async (id) => {
+    try {
+      const deletedBlog = await blogService.deleteBlog(id)
+      console.log(deletedBlog)
+      setBlogs(
+        blogs.filter(blog => blog.id !== id)
+      )
+    } catch (exception) {
+      console.log(exception.message)
+    }
+  }
+
+  // --- Like functionality ---
+  const handleLike = async (id,likedBlog) => {
+    try {
+      const updatedBlog = await blogService.update(id, likedBlog)
+      console.log(updatedBlog)
+      setBlogs(
+        blogs.map((blog) => {
+          return blog.id === updatedBlog.id ? {...blog, likes:updatedBlog.likes} : blog
+        })
+      )
+    } catch (exception) {
+      console.log(exception)
+    }
   }
 
   // --- Login funcionality ---
@@ -82,6 +96,7 @@ const App = () => {
         username, password
       })
       console.log(loggedUser)
+      console.log(loggedUser.expiresIn)
       window.localStorage.setItem('loggedBlogCollectorUser', JSON.stringify(loggedUser))
       blogService.setToken(loggedUser.token)
       setUser(loggedUser)
@@ -130,12 +145,14 @@ const App = () => {
         <>
           <UserRow user={user} userPhoto={userPhoto} handleLogout={handleLogout}/>
           <Notification message={notification.message} type={notification.type}/>
-          <h1>add new blog</h1>
-          <BlogForm title={title} author={author} url={url} onTitleChange={onTitleChange} 
-            onAuthorChange={onAuthorChange} onUrlChange={onUrlChange} handleBlogSubmit={handleBlogSubmit}
-          />
+          
+          <Togglable labelTitle={'collect blog'} closeLabelTitle={'maybe later'} ref={blogFormRef}>
+            <h1>collect new blog</h1>
+            <BlogForm submitBlog={handleBlogSubmit}
+            />
+          </Togglable>
           <h1>your blog collection:</h1>
-          <BlogList blogs={blogs}/>
+          <BlogList blogs={blogs} user={user} handleLike={handleLike} handleBlogDeletion={handleBlogDeletion}/>
         </>
       }
       
