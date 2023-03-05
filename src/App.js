@@ -85,6 +85,8 @@ const App = () => {
       window.localStorage.setItem('loggedBlogCollectorUser', JSON.stringify(loggedUser))
       blogService.setToken(loggedUser.token)
       setUser(loggedUser)
+      setUsername('')
+      setPassword('')
       showNotification(`Welcome back ${loggedUser.username}`, 3, 2500)
     
     } catch (exception) {
@@ -132,6 +134,7 @@ const App = () => {
           <BlogForm title={title} author={author} url={url} onTitleChange={onTitleChange} 
             onAuthorChange={onAuthorChange} onUrlChange={onUrlChange} handleBlogSubmit={handleBlogSubmit}
           />
+          <h1>your blog collection:</h1>
           <BlogList blogs={blogs}/>
         </>
       }
